@@ -1,0 +1,3 @@
+# Keep LF line endings in the repo and in working copies, so Windows, CI and Docker see the same files.
+* text=auto eol=lf
+*.pdf binary

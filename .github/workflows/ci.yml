@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]  # branch pushes only; pushing a release tag does not re-run CI
+  pull_request:
+
+# Read-only token: the workflow only checks out code.
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the run it supersedes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # Python 3.12 comes from .python-version; the activated .venv puts the tools on PATH for later steps.
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.13"
+          activate-environment: true
+
+      - name: Install the locked dependencies
+        run: uv sync --locked
+
+      - name: Lint and format check
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Type check
+        run: mypy
+
+      - name: Tests with coverage gate
+        # The floor (fail_under) and the measured package are set in pyproject.toml.
+        run: |
+          python -m pytest -q --cov
+          python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+
+  # Runs in parallel with the checks, so a broken image is caught before merge.
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -t paperasse .
+
+      - name: Smoke test /health
+        run: |
+          docker run -d -p 8000:8000 --name paperasse paperasse
+          for i in $(seq 1 20); do
+            if curl -sf localhost:8000/health; then exit 0; fi
+            sleep 3
+          done
+          docker logs paperasse
+          exit 1
