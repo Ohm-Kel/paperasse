@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Paperasse: downloaded sources and processed data stay out of git
+data/

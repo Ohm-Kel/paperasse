@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paperasse"
+description = "Bilingual LangGraph agent that plans French administrative procedures for international students, with cited official sources and human approval."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Semanu Kwaku Sebuava" }]
+keywords = ["rag", "agents", "langgraph", "llm", "evaluation", "fastapi"]
+dynamic = ["version"]
+# Exact pins; uv.lock pins every transitive dependency too. Update with `uv lock --upgrade-package <name>`.
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn==0.53.0",
+]
+
+[project.urls]
+Repository = "https://github.com/Ohm-Kel/paperasse"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "paperasse.__version__" }
+
+[dependency-groups]
+# Installed by `uv sync`; left out of the Docker image with `--no-dev`.
+dev = [
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "httpx2==2.13.1",  # FastAPI's TestClient sends its requests through httpx2 (plain httpx is deprecated there)
+    "ruff==0.16.9",
+    "mypy==2.3.1",
+    "pre-commit==4.6.2",
+]
+
+[tool.uv]
+# Lock for the platforms the project runs on: Windows and macOS laptops, Linux for CI and Docker.
+environments = ["sys_platform == 'win32'", "sys_platform == 'darwin'", "sys_platform == 'linux'"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["paperasse"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 90
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["data"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # import sorting
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "SIM", # simplifications
+    "D1",  # missing docstrings
+]
+ignore = [
+    "D105", # magic methods
+    "D107", # __init__ (documented on the class)
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI dependency injection uses calls in defaults by design
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Header"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D1"]
